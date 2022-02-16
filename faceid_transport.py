@@ -5,8 +5,6 @@ from configparser import ConfigParser
 from flask import Flask, request, Response
 import requests
 import os
-import subprocess
-import time
 import logging
 
 from requests import HTTPError, Timeout, TooManyRedirects
@@ -26,24 +24,25 @@ app = Flask(__name__)   # Создаем Flask приложение
 """__file__ выдает нам путь до файла,abspath редактирует путь под систему откуда запускается файл, dirname получаем \
 путь до папки"""
 root_path = os.path.dirname(os.path.abspath(__file__))
-config_path = os.path.join(root_path, 'faceid.cfg') # Подкючаем конфиг к нашему приложению
-config = ConfigParser() # Парсим конфиг faceid.cfg
+config_path = os.path.join(root_path, 'faceid.cfg')  # Подкючаем конфиг к нашему приложению
+config = ConfigParser()  # Парсим конфиг faceid.cfg
 config.read(config_path)
 
-faceid_config_url = config.get('FACEID', 'url') # Достаем из конфига url, port
+faceid_config_url = config.get('FACEID', 'url')  # Достаем из конфига url, port
 faceid_config_port = config.get('FACEID', 'port')
 
 number_of_attempts = 5
 
 # http://192.168.10.98:8091/daycamprocessing?path_to_dir=/mnt/data/test_images/20210519_57&clientid=3
 
-@app.route('/daycamprocessing') # Ждем запрос и формируем url из полученных параметров
+
+@app.route('/daycamprocessing')  # Ждем запрос и формируем url из полученных параметров
 def query():
     url = f'{faceid_config_url}:{faceid_config_port}/'
     path_to_dir = request.args.get('path_to_dir')
     clientid = request.args.get('clientid')
     url += f'daycamprocessing?path_to_dir={path_to_dir}&clientid={clientid}'
-    logger.debug(f'url is {url}')
+    logger.info(f'The request from the DLM came: {url}')
 
     manager = multiprocessing.Manager()
     check_dict = manager.dict()
@@ -60,37 +59,39 @@ def query():
     if ocr_status:
         stop_ocr = command_to_service(number_of_attempts, 'ocr_lp', 'stop')
         if not stop_ocr:
-            check_dict['status_code'] = 429
+            check_dict['status_code'] = 429  # Если команда не прошла отдаем DLM статус код 429
             return Response(check_dict['status_code'])
 
     if scheduler_status:
         stop_scheduler = command_to_service(number_of_attempts, 'atlas_scheduler', 'stop')
         if not stop_scheduler:
-            check_dict['status_code'] = 429
+            check_dict['status_code'] = 429  # Если команда не прошла отдаем DLM статус код 429
             return Response(check_dict['status_code'])
 
     if not faceid_status:
         start_faceid = command_to_service(number_of_attempts, 'faceid', 'start')
         if not start_faceid:
-            check_dict['status_code'] = 429
+            check_dict['status_code'] = 429  # Если команда не прошла отдаем DLM статус код 429
             return Response(check_dict['status_code'])
 
-    logger.info('Отправляем запрос к faceid')
     create_processes.start()
 
-    while create_processes.is_alive():  # Ждём завершения процесса, который
+    while create_processes.is_alive():  # Ждём завершения процесса
         pass
 
     restart_faceid = command_to_service(number_of_attempts, 'faceid', 'restart')
     start_ocr = command_to_service(number_of_attempts, 'ocr_lp', 'start')
     start_sheduler = command_to_service(number_of_attempts, 'atlas_scheduler', 'start')
 
+    # Если какая-либо из команд не прошла отдаем DLM статус код 429
     if not restart_faceid or not start_ocr or not start_sheduler:
+
         check_dict['status_code'] = 429
         return Response(check_dict['status_code'])
 
-    logger.info(f"status_code from faceid: {check_dict['status_code']}")
+    logger.info(f"Return status_code to DLM: {check_dict['status_code']}")
     return Response(check_dict['status_code'])
+
 
 def status_service(name_service: str) -> bool:
     """
@@ -103,8 +104,9 @@ def status_service(name_service: str) -> bool:
         logger.info(f'{name_service} status is active')
         return True
     else:
-        logger.info(f'Error: exit code is: {exit_code}')
+        logger.info(f'Error:Get status_service failed, exit code is: {exit_code}')
     return False
+
 
 def command_to_service(number_of_attempts: int, name_service: str, cmd: str) -> bool:
     """
@@ -125,9 +127,10 @@ def command_to_service(number_of_attempts: int, name_service: str, cmd: str) -> 
         logger.info(f'Количесвто попыток: {i}')
     return False
 
+
 def get_to_faceid(number_of_attempts: int, url: str, check_dict: dict) -> dict:
     """
-    Фунцкия описывает процесс запроса к faceid
+    Фунцкия описывает процесс отправки запроса к faceid
     :param number_of_attempts: количество попыток отправки запроса
     :param check_dict: multiprocessing.Manager.dict()
     :param url: url к faceid
@@ -156,4 +159,5 @@ def get_to_faceid(number_of_attempts: int, url: str, check_dict: dict) -> dict:
 
 
 if __name__ == '__main__':
+    logger.info('faceid_transport service has been launched...')
     app.run(host='192.168.0.159', debug=True, port=8092)
