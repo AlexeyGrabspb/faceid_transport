@@ -50,12 +50,14 @@ def query():
     # который будет отправлять гет запрос к FaceID и возвращать статус ответа
     create_processes.daemon = True
 
+    logger.info('Проверяем статус работы сервисов: ocr_lp, faceid, atlas_scheduler')
     # Запускаем сабпроцессы в фоне, которые будет отдавать статус работы сервисов ocr_lp, faceid, atlas_scheduler
     ocr_status = status_service('ocr_lp')
     faceid_status = status_service('faceid')
-    scheduler_status = status_service('atlas_schedule')
+    scheduler_status = status_service('atlas_scheduler')
 
     # Если работают ocr_lp, atlas_scheduler - останавливаем; если faceid не работает - запускаем
+    logger.info('Если работают ocr_lp, atlas_scheduler - останавливаем; если faceid не работает - запускаем')
     if ocr_status:
         stop_ocr = command_to_service(number_of_attempts, 'ocr_lp', 'stop')
         if not stop_ocr:
@@ -79,6 +81,7 @@ def query():
     while create_processes.is_alive():  # Ждём завершения процесса
         pass
 
+    logger.info("Возвращаем службы в работу")
     restart_faceid = command_to_service(number_of_attempts, 'faceid', 'restart')
     start_ocr = command_to_service(number_of_attempts, 'ocr_lp', 'start')
     start_sheduler = command_to_service(number_of_attempts, 'atlas_scheduler', 'start')
@@ -89,7 +92,7 @@ def query():
         check_dict['status_code'] = 429
         return Response(check_dict['status_code'])
 
-    logger.info(f"Return status_code to DLM: {check_dict['status_code']}")
+    logger.info(f"Done. Status_code {check_dict['status_code']} was sent to DLM")
     return Response(check_dict['status_code'])
 
 
@@ -104,7 +107,7 @@ def status_service(name_service: str) -> bool:
         logger.info(f'{name_service} status is active')
         return True
     else:
-        logger.info(f'Error:Get status_service failed, exit code is: {exit_code}')
+        logger.info(f'Error:Get status {name_service} failed, exit code is: {exit_code}')
     return False
 
 
@@ -138,10 +141,10 @@ def get_to_faceid(number_of_attempts: int, url: str, check_dict: dict) -> dict:
     """
     for i in range(1, number_of_attempts + 1):
         try:
-            logger.info(f'Отправляем запрос к faceid, количесвто попыток: {i}')
+            logger.info(f'Теперь отправляем запрос к faceid, количесвто попыток: {i}')
             response = requests.get(url, timeout=9999999)
             check_dict['status_code'] = response.status_code
-            logger.info(f'Статус ответа: {response.status_code}')
+            logger.info(f'Ответ получен, статус ответа: {response.status_code}')
             return check_dict
         except ConnectionError as ex:
             logger.exception(ex)
