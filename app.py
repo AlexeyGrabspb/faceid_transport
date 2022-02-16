@@ -9,21 +9,16 @@ import logging
 
 from requests import HTTPError, Timeout, TooManyRedirects
 
-root = logging.getLogger()
-root.setLevel(logging.INFO)
+
+root_path = os.path.dirname(os.path.abspath(__file__))
 
 logger = logging.getLogger('faceid_transport')
 logger.setLevel(logging.INFO)
-handler = RotatingFileHandler('faceid_transport.log', maxBytes=20000, backupCount=2)
+handler = RotatingFileHandler(filename=os.path.join(root_path, 'faceid_transport.log'), maxBytes=20000, backupCount=2)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-
-app = Flask(__name__)   # Создаем Flask приложение
-"""__file__ выдает нам путь до файла,abspath редактирует путь под систему откуда запускается файл, dirname получаем \
-путь до папки"""
-root_path = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(root_path, 'faceid.cfg')  # Подкючаем конфиг к нашему приложению
 config = ConfigParser()  # Парсим конфиг faceid.cfg
 config.read(config_path)
@@ -35,6 +30,9 @@ number_of_attempts = 5
 
 # http://192.168.10.98:8091/daycamprocessing?path_to_dir=/mnt/data/test_images/20210519_57&clientid=3
 
+app = Flask(__name__)   # Создаем Flask приложение
+"""__file__ выдает нам путь до файла,abspath редактирует путь под систему откуда запускается файл, dirname получаем \
+путь до папки"""
 
 @app.route('/daycamprocessing')  # Ждем запрос и формируем url из полученных параметров
 def query():
