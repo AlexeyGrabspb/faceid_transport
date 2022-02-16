@@ -77,6 +77,7 @@ def query():
             return Response(check_dict['status_code'])
 
     create_processes.start()
+    logger.info(f"Процесс отправки запроса к faceid с PID: {create_processes.pid} запущен.")
 
     while create_processes.is_alive():  # Ждём завершения процесса
         pass
@@ -88,7 +89,6 @@ def query():
 
     # Если какая-либо из команд не прошла отдаем DLM статус код 429
     if not restart_faceid or not start_ocr or not start_sheduler:
-
         check_dict['status_code'] = 429
         return Response(check_dict['status_code'])
 
@@ -141,7 +141,7 @@ def get_to_faceid(number_of_attempts: int, url: str, check_dict: dict) -> dict:
     """
     for i in range(1, number_of_attempts + 1):
         try:
-            logger.info(f'Теперь отправляем запрос к faceid, количесвто попыток: {i}')
+            logger.info(f'Количесвто попыток отправки запроса к faceid: {i}')
             response = requests.get(url, timeout=9999999)
             check_dict['status_code'] = response.status_code
             logger.info(f'Ответ получен, статус ответа: {response.status_code}')
