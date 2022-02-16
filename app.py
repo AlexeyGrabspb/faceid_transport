@@ -62,19 +62,20 @@ def query():
         stop_ocr = command_to_service(number_of_attempts, 'ocr_lp', 'stop')
         if not stop_ocr:
             check_dict['status_code'] = 429  # Если команда не прошла отдаем DLM статус код 429
-            return Response(check_dict['status_code'])
+
+            return Response(status=check_dict['status_code'])
 
     if scheduler_status:
         stop_scheduler = command_to_service(number_of_attempts, 'atlas_scheduler', 'stop')
         if not stop_scheduler:
             check_dict['status_code'] = 429  # Если команда не прошла отдаем DLM статус код 429
-            return Response(check_dict['status_code'])
+            return Response(status=check_dict['status_code'])
 
     if not faceid_status:
         start_faceid = command_to_service(number_of_attempts, 'faceid', 'start')
         if not start_faceid:
             check_dict['status_code'] = 429  # Если команда не прошла отдаем DLM статус код 429
-            return Response(check_dict['status_code'])
+            return Response(status=check_dict['status_code'])
 
     create_processes.start()
     logger.info(f"Процесс отправки запроса к faceid с PID: {create_processes.pid} запущен.")
@@ -90,10 +91,10 @@ def query():
     # Если какая-либо из команд не прошла отдаем DLM статус код 429
     if not restart_faceid or not start_ocr or not start_sheduler:
         check_dict['status_code'] = 429
-        return Response(check_dict['status_code'])
+        return Response(status=check_dict['status_code'])
 
     logger.info(f"Done. Status_code {check_dict['status_code']} was sent to DLM")
-    return Response(check_dict['status_code'])
+    return Response(status=check_dict['status_code'])
 
 
 def status_service(name_service: str) -> bool:
