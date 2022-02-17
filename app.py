@@ -34,6 +34,7 @@ app = Flask(__name__)   # Создаем Flask приложение
 """__file__ выдает нам путь до файла,abspath редактирует путь под систему откуда запускается файл, dirname получаем \
 путь до папки"""
 
+
 @app.route('/daycamprocessing')  # Ждем запрос и формируем url из полученных параметров
 def query():
     url = f'{faceid_config_url}:{faceid_config_port}/'
@@ -103,10 +104,11 @@ def status_service(name_service: str) -> bool:
     """
     exit_code = os.WEXITSTATUS(os.system(f'systemctl is-active --quiet {name_service}'))
     if exit_code == 0:
-        logger.info(f'{name_service} status is active')
+        logger.info(f'{name_service} status is active. Exit code: {exit_code}, message: {os.strerror(exit_code)}')
         return True
     else:
-        logger.info(f'Error:Get status {name_service} failed, exit code is: {exit_code}')
+        logger.info(f'Error:Get status {name_service} failed, exit code is: {exit_code},\
+         message: {os.strerror(exit_code)}')
     return False
 
 
@@ -122,10 +124,11 @@ def command_to_service(number_of_attempts: int, name_service: str, cmd: str) -> 
     exit_code = os.WEXITSTATUS(os.system(f'systemctl {cmd} {name_service}'))
     for i in range(1, number_of_attempts + 1):
         if exit_code == 0:
-            logger.info(f'{name_service} has been {cmd}ed')
+            logger.info(f'{name_service} has been {cmd}ed. Exit code: {exit_code}, message: {os.strerror(exit_code)}')
             return True
         else:
-            logger.error(f'Error:{name_service} has not been {cmd}ed, exit code is: {exit_code}')
+            logger.error(f'Error:{name_service} has not been {cmd}ed, exit code: {exit_code},\
+             message: {os.strerror(exit_code)}')
         logger.info(f'Количесвто попыток: {i}')
     return False
 
